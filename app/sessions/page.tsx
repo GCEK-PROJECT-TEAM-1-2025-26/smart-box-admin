@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { SessionsTable } from '@/components/tables/sessions-table';
-import { subscribeToSessions, forceStopSession } from '@/lib/firestore';
-import { Session } from '@/types';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { SessionsTable } from "@/components/tables/sessions-table";
+import { subscribeToSessions, forceStopSession } from "@/lib/firestore";
+import { Session } from "@/types";
 
 export default function SessionsPage() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     if (!user) return;
@@ -25,39 +25,44 @@ export default function SessionsPage() {
   }, [user]);
 
   const handleForceStop = async (sessionId: string) => {
-    if (confirm('Are you sure you want to force stop this session?')) {
+    if (confirm("Are you sure you want to force stop this session?")) {
       try {
         await forceStopSession(sessionId);
         // Sessions list will update automatically via real-time listener
       } catch (error) {
-        console.error('Error stopping session:', error);
-        alert('Failed to stop session');
+        console.error("Error stopping session:", error);
+        alert("Failed to stop session");
       }
     }
   };
 
-  const filteredSessions = sessions.filter(session => {
-    const matchesSearch = 
-      (session.userName && session.userName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (session.boxName && session.boxName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+  const filteredSessions = sessions.filter((session) => {
+    const matchesSearch =
+      (session.userName &&
+        session.userName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (session.boxName &&
+        session.boxName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       session.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.boxId.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
-    
+
+    const matchesStatus =
+      statusFilter === "all" || session.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
-  const activeSessions = sessions.filter(session => session.status === 'active').length;
+  const activeSessions = sessions.filter(
+    (session) => session.status === "active"
+  ).length;
   const totalRevenue = sessions
-    .filter(session => session.status === 'completed')
+    .filter((session) => session.status === "completed")
     .reduce((sum, session) => sum + session.cost, 0);
 
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Sessions</h1>
-        <p className="text-gray-600">Monitor user sessions and usage</p>
+        <h1 className="text-3xl font-bold text-white-900">Sessions</h1>
+        <p className="text-white-600">Monitor user sessions and usage</p>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
@@ -99,7 +104,7 @@ export default function SessionsPage() {
           <div className="text-gray-500">Loading sessions...</div>
         </div>
       ) : (
-        <SessionsTable 
+        <SessionsTable
           sessions={filteredSessions}
           onForceStop={handleForceStop}
         />
