@@ -24,6 +24,14 @@ export function BoxesTable({
       minute: "2-digit",
     });
   };
+
+  const formatBoxRevenue = (revenue: number | undefined | null) => {
+    if (typeof revenue !== "number" || Number.isNaN(revenue)) {
+      return "0.00";
+    }
+    return revenue.toFixed(2);
+  };
+
   return (
     <div className="bg-gray-900 border border-gray-700 shadow rounded-lg overflow-hidden">
       <table className="min-w-full divide-y divide-gray-700">
@@ -53,7 +61,6 @@ export function BoxesTable({
           </tr>
         </thead>
         <tbody className="bg-gray-900 divide-y divide-gray-700">
-          {" "}
           {boxes.map((box) => (
             <tr key={box.id} className="hover:bg-gray-800">
               <td className="px-6 py-4 whitespace-nowrap">
@@ -86,10 +93,9 @@ export function BoxesTable({
                     {box.isUnlocked ? "Unlocked" : "Locked"}
                   </span>
                 </div>
-              </td>{" "}
+              </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex flex-col gap-1">
-                  {" "}
                   <div className="flex items-center gap-2">
                     <div className="flex items-center text-sm text-gray-300">
                       <svg
@@ -121,7 +127,7 @@ export function BoxesTable({
                     >
                       {box.evChargerOn ? "ON" : "OFF"}
                     </button>
-                  </div>{" "}
+                  </div>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center text-sm text-gray-300">
                       <svg
@@ -161,13 +167,13 @@ export function BoxesTable({
                   <span className="text-blue-400">{box.currentUser}</span>
                 ) : (
                   <span className="text-gray-500">None</span>
-                )}{" "}
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-white">
                   <div>Sessions: {box.totalSessions}</div>
                   <div className="text-green-400">
-                    ₹{box.totalRevenue.toFixed(2)}
+                    ₹{formatBoxRevenue(box.totalRevenue)}
                   </div>
                 </div>
               </td>

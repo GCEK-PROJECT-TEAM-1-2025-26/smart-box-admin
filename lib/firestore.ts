@@ -1,6 +1,7 @@
 import { 
   collection, 
   doc, 
+  getDoc,
   onSnapshot, 
   query, 
   orderBy, 
@@ -130,13 +131,57 @@ export const subscribeToBoxes = (callback: (boxes: SmartBox[]) => void) => {
 export const subscribeToSessions = (callback: (sessions: Session[]) => void) => {
   return onSnapshot(
     query(collection(db, 'sessions'), orderBy('startTime', 'desc'), limit(100)),
-    (snapshot) => {
-      const sessions = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        startTime: doc.data().startTime?.toDate() || new Date(),
-        endTime: doc.data().endTime?.toDate() || null
-      })) as Session[];
+    async (snapshot) => {
+      const docs = snapshot.docs;
+
+      const sessions = await Promise.all(
+        docs.map(async (snap) => {
+          const data = snap.data();
+
+          const startTime: Date = data.startTime?.toDate() || new Date();
+          const endTime: Date | null = data.endTime?.toDate() || null;
+
+          // Compute duration in seconds from start/end if not present
+          let duration: number;
+          if (typeof data.duration === 'number' && !Number.isNaN(data.duration)) {
+            duration = data.duration;
+          } else {
+            const endForDuration = endTime ?? new Date();
+            duration = Math.max(
+              0,
+              Math.floor((endForDuration.getTime() - startTime.getTime()) / 1000)
+            );
+          }
+
+          // Fetch user display name/email if userName not already stored
+          let userName: string | undefined = data.userName;
+          if (!userName && data.userId) {
+            try {
+              const userSnap = await getDoc(doc(db, 'users', data.userId));
+              if (userSnap.exists()) {
+                const userData = userSnap.data() as any;
+                userName =
+                  userData.displayName ||
+                  userData.name ||
+                  userData.email ||
+                  data.userId;
+              }
+            } catch (e) {
+              console.error('Failed to fetch user for session', snap.id, e);
+            }
+          }
+
+          return {
+            id: snap.id,
+            ...data,
+            userName,
+            startTime,
+            endTime,
+            duration,
+          } as Session;
+        })
+      );
+
       callback(sessions);
     }
   );
