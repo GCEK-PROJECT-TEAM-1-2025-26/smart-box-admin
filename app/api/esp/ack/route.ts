@@ -26,13 +26,14 @@ function authenticateDevice(req: NextRequest): string | null {
 export async function POST(req: NextRequest) {
   try {
     // Authenticate ESP32 device
-    const deviceId = authenticateDevice(req);
-    if (!deviceId) {
+    const deviceId = authenticateDevice(req);    if (!deviceId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
-    }    const body = await req.json();
+    }
+
+    const body = await req.json();
 
     console.log(`ESP POST /api/esp/ack deviceId=${deviceId}`, body);
 
@@ -47,12 +48,12 @@ export async function POST(req: NextRequest) {
     // Extract device states from the state object
     const lockState = state?.lock || "UNKNOWN";
     const evOn = state?.ev ?? false;
-    const p3On = state?.p3 ?? false;
-
-    // Extract energy data
+    const p3On = state?.p3 ?? false;    // Extract energy data
     const energyOk = energy?.ok ?? false;
     const evmeter = energy?.evmeter || {};
-    const p3meter = energy?.p3meter || {};    // 1. Update command status to "completed" (if commandId provided)
+    const p3meter = energy?.p3meter || {};
+
+    // 1. Update command status to "completed" (if commandId provided)
     if (commandId) {
       const commandStatus = success ? "completed" : "failed";
       
@@ -67,10 +68,11 @@ export async function POST(req: NextRequest) {
             lockState,
             evOn,
             p3On,
-            timestamp,
-          },
+            timestamp,          },
         });
-    }    // 2. Update the box document with current device state
+    }
+
+    // 2. Update the box document with current device state
     // This updates boxes collection, maintaining your existing structure
     const boxUpdateData: any = {};
 
@@ -105,9 +107,10 @@ export async function POST(req: NextRequest) {
     if (Object.keys(boxUpdateData).length > 0) {
       await db
         .collection("boxes")
-        .doc(deviceId)
-        .update(boxUpdateData);
-    }    // 3. Optional: Store energy readings as separate collection for time-series data
+        .doc(deviceId)        .update(boxUpdateData);
+    }
+
+    // 3. Optional: Store energy readings as separate collection for time-series data
     // This allows historical energy tracking
     if (energyOk && p3meter && Object.keys(p3meter).length > 0) {
       await db
