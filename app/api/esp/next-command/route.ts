@@ -48,15 +48,15 @@ export async function GET(req: NextRequest) {
       .orderBy("createdAt", "asc")
       .limit(1);
 
-    const snapshot = await query.get();    if (snapshot.empty) {
+    const snapshot = await query.get();
+
+    if (snapshot.empty) {
       // No pending command
       return NextResponse.json({ none: true });
     }
 
     const doc = snapshot.docs[0];
-    const data = doc.data();
-
-    // Map from existing command structure to ESP32 expected format
+    const data = doc.data();    // Map from existing command structure to ESP32 expected format
     const actions: any = {};
 
     if (data.commandType === "unlock") {
