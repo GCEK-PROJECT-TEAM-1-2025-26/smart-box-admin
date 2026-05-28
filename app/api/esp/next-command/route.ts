@@ -63,12 +63,16 @@ export async function GET(req: NextRequest) {
       actions.lock = "UNLOCK";
     } else if (data.commandType === "lock") {
       actions.lock = "LOCK";
-    } else if (data.commandType === "deviceControl" && data.payload) {
-      // Handle device control commands
+    } else if ((data.commandType === "deviceControl" || data.commandType === "device_control") && data.payload) {
+      // Handle device control commands (support both camelCase and snake_case)
       if (data.payload.device === "evCharger") {
-        actions.ev = data.payload.action === "turnOn" ? true : false;
+        // Support both "turnOn" and "turn_on" action formats
+        const actionValue = data.payload.action;
+        actions.ev = actionValue === "turnOn" || actionValue === "turn_on" ? true : false;
       } else if (data.payload.device === "threePinSocket") {
-        actions.p3 = data.payload.action === "turnOn" ? true : false;
+        // Support both "turnOn" and "turn_off" action formats
+        const actionValue = data.payload.action;
+        actions.p3 = actionValue === "turnOn" || actionValue === "turn_on" ? true : false;
       }
     }
 
