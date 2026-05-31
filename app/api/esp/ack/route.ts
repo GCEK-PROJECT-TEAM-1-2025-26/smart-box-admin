@@ -42,17 +42,16 @@ export async function POST(req: NextRequest) {
       timestamp,
       state,
       energy,
-    } = body;
-
-    // Extract device states from the state object
+    } = body;    // Extract device states from the state object
     const lockState = state?.lock || "UNKNOWN";
     const evOn = state?.ev ?? false;
     const p3On = state?.p3 ?? false;
+    const rfidDetected = state?.rfid ?? false;
 
     // Extract energy data
     const energyOk = energy?.ok ?? false;
     const evmeter = energy?.evmeter || {};
-    const p3meter = energy?.p3meter || {};    // 1. Update command status to "completed" (if commandId provided)
+    const p3meter = energy?.p3meter || {};// 1. Update command status to "completed" (if commandId provided)
     if (commandId) {
       const commandStatus = success ? "completed" : "failed";
       
@@ -76,6 +75,11 @@ export async function POST(req: NextRequest) {
 
     if (lockState) {
       boxUpdateData["isLocked"] = lockState === "LOCKED";
+    }
+
+    // Update RFID detected status
+    if (rfidDetected !== undefined) {
+      boxUpdateData["rfidDetected"] = rfidDetected;
     }
 
     // Update EV charger status if provided
