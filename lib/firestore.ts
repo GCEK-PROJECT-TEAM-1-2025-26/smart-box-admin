@@ -113,15 +113,38 @@ export const subscribeToUsers = (callback: (users: User[]) => void) => {
 };
 
 // Subscribe to all smart boxes
+// Maps the actual Firestore schema (written by Flutter app) to the SmartBox admin type
 export const subscribeToBoxes = (callback: (boxes: SmartBox[]) => void) => {
   return onSnapshot(
     query(collection(db, 'boxes'), orderBy('lastUpdated', 'desc')),
     (snapshot) => {
-      const boxes = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        lastUpdated: doc.data().lastUpdated?.toDate() || new Date()
-      })) as SmartBox[];
+      const boxes = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Flutter stores isLocked (true = locked), admin uses isUnlocked (true = unlocked)
+        const isLocked: boolean = data.isLocked ?? true;
+        // Flutter stores devices as nested objects
+        const evChargerOn: boolean = data.devices?.evCharger?.isOn ?? false;
+        const threePinOn: boolean = data.devices?.threePinSocket?.isOn ?? false;
+        // Flutter uses status field: 'available', 'in_use'
+        const isOnline: boolean = data.status !== undefined; // box doc exists = online
+        const status: string = data.status ?? 'available';
+
+        return {
+          id: doc.id,
+          name: data.boxId ?? doc.id,
+          location: data.location ?? '',
+          isOnline,
+          isUnlocked: !isLocked,
+          evChargerOn,
+          threePinOn,
+          currentUser: status === 'in_use' ? (data.currentUserId ?? 'In Use') : undefined,
+          lastUpdated: data.lastUpdated?.toDate() ?? new Date(),
+          totalSessions: data.totalSessions ?? 0,
+          totalRevenue: data.totalRevenue ?? 0,
+          // pass through raw fields for updateBoxStatus
+          _raw: data,
+        } as SmartBox;
+      });
       callback(boxes);
     }
   );
@@ -194,12 +217,27 @@ export const updateUserWallet = async (userId: string, newBalance: number) => {
 };
 
 // Update box status
-export const updateBoxStatus = async (boxId: string, status: Partial<SmartBox>) => {
+// Maps admin SmartBox fields back to the correct Firestore paths used by Flutter
+export const updateBoxStatus = async (boxId: string, status: Partial<SmartBox & { isUnlocked?: boolean; evChargerOn?: boolean; threePinOn?: boolean }>) => {
   const boxRef = doc(db, 'boxes', boxId);
-  await updateDoc(boxRef, {
-    ...status,
-    lastUpdated: Timestamp.now()
-  });
+
+  // Build the correct Firestore update object
+  const update: Record<string, unknown> = { lastUpdated: Timestamp.now() };
+
+  if (status.isUnlocked !== undefined) {
+    // Admin toggles isUnlocked → Flutter reads isLocked (inverted)
+    update['isLocked'] = !status.isUnlocked;
+  }
+  if (status.evChargerOn !== undefined) {
+    // Flutter stores nested: devices.evCharger.isOn
+    update['devices.evCharger.isOn'] = status.evChargerOn;
+  }
+  if (status.threePinOn !== undefined) {
+    // Flutter stores nested: devices.threePinSocket.isOn
+    update['devices.threePinSocket.isOn'] = status.threePinOn;
+  }
+
+  await updateDoc(boxRef, update);
 };
 
 // Force stop a session
