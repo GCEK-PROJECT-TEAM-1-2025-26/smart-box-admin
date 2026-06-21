@@ -9,7 +9,12 @@ import {
   where,
   updateDoc,
   deleteDoc,
-  Timestamp 
+  Timestamp,
+  QuerySnapshot,
+  DocumentData,
+  setDoc,
+  serverTimestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { User, SmartBox, Session, DashboardStats } from '@/types';
@@ -45,13 +50,40 @@ export const subscribeToStats = (callback: (stats: DashboardStats) => void) => {
   });
   unsubscribers.push(usersUnsubscribe);
 
+  let lastBoxesSnapshot: QuerySnapshot<DocumentData> | null = null;
+
   // Subscribe to boxes count
   const boxesUnsubscribe = onSnapshot(collection(db, 'boxes'), (snapshot) => {
+    lastBoxesSnapshot = snapshot;
     stats.totalBoxes = snapshot.size;
-    stats.activeBoxes = snapshot.docs.filter(doc => doc.data().isOnline === true).length;
+    const now = Date.now();
+    stats.activeBoxes = snapshot.docs.filter(doc => {
+      const data = doc.data();
+      const lastHeartbeat = data.lastHeartbeat?.toDate();
+      return lastHeartbeat ? (now - lastHeartbeat.getTime() < 20000) : false;
+    }).length;
     checkAndCallback();
   });
   unsubscribers.push(boxesUnsubscribe);
+
+  // Periodically refresh activeBoxes count based on elapsed time without new db reads
+  const intervalId = setInterval(() => {
+    if (lastBoxesSnapshot) {
+      const now = Date.now();
+      const activeBoxes = lastBoxesSnapshot.docs.filter((doc) => {
+        const data = doc.data();
+        const lastHeartbeat = data.lastHeartbeat?.toDate();
+        return lastHeartbeat ? (now - lastHeartbeat.getTime() < 20000) : false;
+      }).length;
+      if (activeBoxes !== stats.activeBoxes) {
+        stats.activeBoxes = activeBoxes;
+        // Make sure to only invoke callback if all other stats are also loaded
+        if (statsUpdated >= totalStatsToLoad) {
+          callback({ ...stats });
+        }
+      }
+    }
+  }, 10000);
 
   // Subscribe to active sessions
   const sessionsUnsubscribe = onSnapshot(
@@ -93,6 +125,7 @@ export const subscribeToStats = (callback: (stats: DashboardStats) => void) => {
 
   // Return cleanup function
   return () => {
+    clearInterval(intervalId);
     unsubscribers.forEach(unsubscribe => unsubscribe());
   };
 };
@@ -126,8 +159,13 @@ export const subscribeToBoxes = (callback: (boxes: SmartBox[]) => void) => {
         const evChargerOn: boolean = data.devices?.evCharger?.isOn ?? false;
         const threePinOn: boolean = data.devices?.threePinSocket?.isOn ?? false;
         // Flutter uses status field: 'available', 'in_use'
-        const isOnline: boolean = data.status !== undefined; // box doc exists = online
         const status: string = data.status ?? 'available';
+        const lastHeartbeat = data.lastHeartbeat?.toDate() ?? undefined;
+        const isOnline = lastHeartbeat ? (Date.now() - lastHeartbeat.getTime() < 20000) : false;
+
+        const ownerId: string | undefined = data.ownerId ?? undefined;
+        const latitude: number | undefined = typeof data.latitude === 'number' ? data.latitude : undefined;
+        const longitude: number | undefined = typeof data.longitude === 'number' ? data.longitude : undefined;
 
         return {
           id: doc.id,
@@ -139,6 +177,10 @@ export const subscribeToBoxes = (callback: (boxes: SmartBox[]) => void) => {
           threePinOn,
           currentUser: status === 'in_use' ? (data.currentUserId ?? 'In Use') : undefined,
           lastUpdated: data.lastUpdated?.toDate() ?? new Date(),
+          lastHeartbeat,
+          ownerId,
+          latitude,
+          longitude,
           totalSessions: data.totalSessions ?? 0,
           totalRevenue: data.totalRevenue ?? 0,
           // pass through raw fields for updateBoxStatus
@@ -182,7 +224,7 @@ export const subscribeToSessions = (callback: (sessions: Session[]) => void) => 
             try {
               const userSnap = await getDoc(doc(db, 'users', data.userId));
               if (userSnap.exists()) {
-                const userData = userSnap.data() as any;
+                const userData = userSnap.data() as DocumentData;
                 userName =
                   userData.displayName ||
                   userData.name ||
@@ -241,16 +283,68 @@ export const updateBoxStatus = async (boxId: string, status: Partial<SmartBox & 
 };
 
 // Force stop a session
-export const forceStopSession = async (sessionId: string) => {
+export const forceStopSession = async (sessionId: string, boxId: string) => {
+  const batch = writeBatch(db);
+
   const sessionRef = doc(db, 'sessions', sessionId);
-  await updateDoc(sessionRef, {
+  batch.update(sessionRef, {
     status: 'completed',
+    isActive: false,
     endTime: Timestamp.now()
   });
+
+  const boxRef = doc(db, 'boxes', boxId);
+  batch.update(boxRef, {
+    status: 'available',
+    isLocked: true,
+    'devices.evCharger.isOn': false,
+    'devices.threePinSocket.isOn': false,
+    lastUpdated: Timestamp.now()
+  });
+
+  await batch.commit();
 };
 
 // Delete user (admin only)
 export const deleteUser = async (userId: string) => {
   const userRef = doc(db, 'users', userId);
   await deleteDoc(userRef);
+};
+
+// Add new box
+export const addBox = async (
+  boxId: string,
+  location: string,
+  latitude: number,
+  longitude: number,
+  ownerId?: string
+) => {
+  const boxRef = doc(db, 'boxes', boxId);
+  await setDoc(boxRef, {
+    boxId: boxId,
+    location: location,
+    latitude: latitude,
+    longitude: longitude,
+    ownerId: ownerId || null,
+    isLocked: true,
+    rfidDetected: true,
+    status: 'available',
+    devices: {
+      evCharger: {
+        isOn: false,
+        voltage: 0,
+        current: 0,
+        power: 0
+      },
+      threePinSocket: {
+        isOn: false,
+        voltage: 0,
+        current: 0,
+        power: 0
+      }
+    },
+    lastUpdated: serverTimestamp(),
+    totalSessions: 0,
+    totalRevenue: 0
+  });
 };

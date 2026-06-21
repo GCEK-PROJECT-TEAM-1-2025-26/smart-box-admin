@@ -42,12 +42,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
+        <div className="flex flex-col items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Smart Box Logo"
+            className="w-16 h-16 rounded-2xl object-cover border border-blue-500/30 shadow-lg shadow-blue-500/10 mb-4"
+          />
+          <h2 className="text-center text-3xl font-extrabold text-white">
             Smart Box Admin
           </h2>
           <p className="mt-2 text-center text-sm text-gray-300">
-            Sign in to your account
+            Sign in to your admin account
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

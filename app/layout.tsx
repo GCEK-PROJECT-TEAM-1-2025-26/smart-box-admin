@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Smart Box Admin",
   description: "Admin panel for Smart Box management",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({

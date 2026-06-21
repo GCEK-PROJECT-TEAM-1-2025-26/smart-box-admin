@@ -24,10 +24,10 @@ export default function SessionsPage() {
     return () => unsubscribe();
   }, [user]);
 
-  const handleForceStop = async (sessionId: string) => {
+  const handleForceStop = async (sessionId: string, boxId: string) => {
     if (confirm("Are you sure you want to force stop this session?")) {
       try {
-        await forceStopSession(sessionId);
+        await forceStopSession(sessionId, boxId);
         // Sessions list will update automatically via real-time listener
       } catch (error) {
         console.error("Error stopping session:", error);

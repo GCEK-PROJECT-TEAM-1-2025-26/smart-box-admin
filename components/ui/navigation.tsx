@@ -63,7 +63,7 @@ const navigationItems = [
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m3 5.197H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+          d="M17 20h5v-1a4 4 0 00-5-3.87M17 20H7m10 0v-1c0-1.657-1.343-3-3-3h-4c-1.657 0-3 1.343-3 3v1m0 0H2v-1a4 4 0 015-3.87M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
         />
       </svg>
     ),
@@ -106,19 +106,24 @@ export function Navigation() {
         <div className="flex justify-between h-16">
           {" "}
           <div className="flex">
-            <div className="shrink-0 flex items-center">
-              <h1 className="text-xl font-bold text-white">Smart Box Admin</h1>
+            <div className="shrink-0 flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="Smart Box Logo"
+                className="w-8 h-8 rounded-lg object-cover border border-blue-500/30"
+              />
+              <h1 className="text-xl font-bold text-white tracking-tight">Smart Box Admin</h1>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navigationItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    pathname === item.href
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${pathname === item.href
                       ? "border-blue-500 text-white"
                       : "border-transparent text-gray-300 hover:text-white hover:border-gray-600"
-                  }`}
+                    }`}
                 >
                   <span className="mr-2">{item.icon}</span>
                   {item.name}

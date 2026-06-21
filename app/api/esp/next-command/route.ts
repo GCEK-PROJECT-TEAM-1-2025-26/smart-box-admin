@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     // Query Firestore for pending commands
     // Using existing structure: commands collection (not boxes subcollection)
-    let query: FirebaseFirestore.Query = db
+    const query: FirebaseFirestore.Query = db
       .collection("commands")
       .where("boxId", "==", deviceId)
       .where("status", "==", "pending")
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
     const doc = snapshot.docs[0];
     const data = doc.data();    // Map from existing command structure to ESP32 expected format
-    const actions: any = {};
+    const actions: Record<string, unknown> = {};
 
     if (data.commandType === "unlock") {
       actions.lock = "UNLOCK";

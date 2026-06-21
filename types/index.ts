@@ -18,8 +18,13 @@ export interface SmartBox {
   threePinOn: boolean;
   currentUser?: string;
   lastUpdated: Date;
+  lastHeartbeat?: Date;
   totalSessions: number;
   totalRevenue: number;
+  ownerId?: string;
+  ownerName?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Session {

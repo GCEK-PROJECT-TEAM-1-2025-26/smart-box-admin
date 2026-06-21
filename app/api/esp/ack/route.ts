@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
     const lockState = state?.lock || "UNKNOWN";
     const evOn = state?.ev ?? false;
     const p3On = state?.p3 ?? false;
-    const rfidDetected = state?.rfid ?? false;
 
     // Extract energy data
     const energyOk = energy?.ok ?? false;
@@ -71,15 +70,10 @@ export async function POST(req: NextRequest) {
         });
     }    // 2. Update the box document with current device state
     // This updates boxes collection, maintaining your existing structure
-    const boxUpdateData: any = {};
+    const boxUpdateData: Record<string, unknown> = {};
 
     if (lockState) {
       boxUpdateData["isLocked"] = lockState === "LOCKED";
-    }
-
-    // Update RFID detected status
-    if (rfidDetected !== undefined) {
-      boxUpdateData["rfidDetected"] = rfidDetected;
     }
 
     // Update EV charger status if provided
@@ -102,8 +96,9 @@ export async function POST(req: NextRequest) {
       boxUpdateData["devices.threePinSocket.isOn"] = p3On;
     }
 
-    // Always update the lastUpdated timestamp
+    // Always update the lastUpdated timestamp and lastHeartbeat timestamp
     boxUpdateData["lastUpdated"] = admin.firestore.FieldValue.serverTimestamp();
+    boxUpdateData["lastHeartbeat"] = admin.firestore.FieldValue.serverTimestamp();
 
     // Update the box document
     if (Object.keys(boxUpdateData).length > 0) {

@@ -2,7 +2,7 @@ import { Session } from "@/types";
 
 interface SessionsTableProps {
   sessions: Session[];
-  onForceStop?: (sessionId: string) => void;
+  onForceStop?: (sessionId: string, boxId: string) => void;
 }
 
 export function SessionsTable({ sessions, onForceStop }: SessionsTableProps) {
@@ -135,7 +135,7 @@ export function SessionsTable({ sessions, onForceStop }: SessionsTableProps) {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">
-                  ₹{formatCost((session as any).cost)}
+                  ₹{formatCost(session.cost)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
@@ -162,7 +162,7 @@ export function SessionsTable({ sessions, onForceStop }: SessionsTableProps) {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   {session.status === "active" && (
                     <button
-                      onClick={() => onForceStop && onForceStop(session.id)}
+                      onClick={() => onForceStop && onForceStop(session.id, session.boxId)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Force Stop

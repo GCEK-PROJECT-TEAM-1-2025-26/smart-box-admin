@@ -69,7 +69,17 @@ export function BoxesTable({
                     {box.name}
                   </div>
                   <div className="text-sm text-gray-300">{box.location}</div>
-                  <div className="text-xs text-gray-500">ID: {box.id}</div>
+                  <div className="text-xs text-gray-500 font-mono">ID: {box.id}</div>
+                  {box.ownerName && (
+                    <div className="text-xs text-blue-400 font-medium mt-0.5">
+                      Owner: {box.ownerName}
+                    </div>
+                  )}
+                  {box.latitude !== undefined && box.longitude !== undefined && (
+                    <div className="text-xs text-gray-400 mt-0.5 font-mono">
+                      GPS: {box.latitude.toFixed(6)}, {box.longitude.toFixed(6)}
+                    </div>
+                  )}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
