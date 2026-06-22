@@ -183,6 +183,12 @@ export const subscribeToBoxes = (callback: (boxes: SmartBox[]) => void) => {
           longitude,
           totalSessions: data.totalSessions ?? 0,
           totalRevenue: data.totalRevenue ?? 0,
+          tariff: data.tariff
+            ? {
+                evRate: typeof data.tariff.evRate === 'number' ? data.tariff.evRate : 12,
+                socketRate: typeof data.tariff.socketRate === 'number' ? data.tariff.socketRate : 8,
+              }
+            : { evRate: 12, socketRate: 8 },
           // pass through raw fields for updateBoxStatus
           _raw: data,
         } as SmartBox;
@@ -317,7 +323,9 @@ export const addBox = async (
   location: string,
   latitude: number,
   longitude: number,
-  ownerId?: string
+  ownerId?: string,
+  evRate: number = 12,
+  socketRate: number = 8
 ) => {
   const boxRef = doc(db, 'boxes', boxId);
   await setDoc(boxRef, {
@@ -343,8 +351,25 @@ export const addBox = async (
         power: 0
       }
     },
+    tariff: {
+      evRate: evRate,
+      socketRate: socketRate,
+    },
     lastUpdated: serverTimestamp(),
     totalSessions: 0,
     totalRevenue: 0
+  });
+};
+
+// Update box tariff rates (admin can edit at any time)
+export const updateBoxTariff = async (
+  boxId: string,
+  evRate: number,
+  socketRate: number
+) => {
+  const boxRef = doc(db, 'boxes', boxId);
+  await updateDoc(boxRef, {
+    tariff: { evRate, socketRate },
+    lastUpdated: Timestamp.now(),
   });
 };

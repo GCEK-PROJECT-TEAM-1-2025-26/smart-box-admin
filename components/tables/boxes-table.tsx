@@ -8,12 +8,14 @@ interface BoxesTableProps {
     deviceType: "ev" | "3pin",
     currentState: boolean
   ) => void;
+  onEditTariff?: (box: SmartBox) => void;
 }
 
 export function BoxesTable({
   boxes,
   onToggleBox,
   onToggleDevice,
+  onEditTariff,
 }: BoxesTableProps) {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
@@ -45,6 +47,9 @@ export function BoxesTable({
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
               Devices
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              Tariff
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
               Current User
@@ -121,7 +126,7 @@ export function BoxesTable({
                           d="M13 10V3L4 14h7v7l9-11h-7z"
                         />
                       </svg>
-                      EV Charger:
+                      EV:
                     </div>
                     <button
                       onClick={() =>
@@ -153,7 +158,7 @@ export function BoxesTable({
                           d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM7 3H5a2 2 0 00-2 2v12a4 4 0 004 4h2V3z"
                         />
                       </svg>
-                      3-Pin Socket:
+                      3-Pin:
                     </div>
                     <button
                       onClick={() =>
@@ -172,6 +177,27 @@ export function BoxesTable({
                   </div>
                 </div>
               </td>
+
+              {/* Tariff column */}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-xs space-y-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-blue-400 font-semibold">⚡</span>
+                    <span className="text-white font-mono">
+                      ₹{(box.tariff?.evRate ?? 12).toFixed(2)}
+                    </span>
+                    <span className="text-gray-500">/kWh</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-green-400 font-semibold">🔌</span>
+                    <span className="text-white font-mono">
+                      ₹{(box.tariff?.socketRate ?? 8).toFixed(2)}
+                    </span>
+                    <span className="text-gray-500">/kWh</span>
+                  </div>
+                </div>
+              </td>
+
               <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                 {box.currentUser ? (
                   <span className="text-blue-400">{box.currentUser}</span>
@@ -191,19 +217,27 @@ export function BoxesTable({
                 {formatDate(box.lastUpdated)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button
-                  onClick={() =>
-                    onToggleBox && onToggleBox(box.id, box.isUnlocked)
-                  }
-                  className={`px-3 py-1 rounded text-sm border ${
-                    box.isUnlocked
-                      ? "bg-red-900 text-red-300 hover:bg-red-800 border-red-700"
-                      : "bg-green-900 text-green-300 hover:bg-green-800 border-green-700"
-                  }`}
-                  disabled={!box.isOnline}
-                >
-                  {box.isUnlocked ? "Lock" : "Unlock"}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() =>
+                      onToggleBox && onToggleBox(box.id, box.isUnlocked)
+                    }
+                    className={`px-3 py-1 rounded text-sm border ${
+                      box.isUnlocked
+                        ? "bg-red-900 text-red-300 hover:bg-red-800 border-red-700"
+                        : "bg-green-900 text-green-300 hover:bg-green-800 border-green-700"
+                    }`}
+                    disabled={!box.isOnline}
+                  >
+                    {box.isUnlocked ? "Lock" : "Unlock"}
+                  </button>
+                  <button
+                    onClick={() => onEditTariff && onEditTariff(box)}
+                    className="px-3 py-1 rounded text-sm border bg-blue-900/60 text-blue-300 hover:bg-blue-800 border-blue-700 cursor-pointer"
+                  >
+                    Edit Tariff
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

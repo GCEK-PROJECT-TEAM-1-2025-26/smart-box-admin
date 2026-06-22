@@ -25,6 +25,10 @@ export interface SmartBox {
   ownerName?: string;
   latitude?: number;
   longitude?: number;
+  tariff?: {
+    evRate: number;    // ₹ per kWh for EV charger
+    socketRate: number; // ₹ per kWh for 3-pin socket
+  };
 }
 
 export interface Session {
