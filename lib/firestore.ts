@@ -2,6 +2,7 @@ import {
   collection, 
   doc, 
   getDoc,
+  getDocs,
   onSnapshot, 
   query, 
   orderBy, 
@@ -372,4 +373,24 @@ export const updateBoxTariff = async (
     tariff: { evRate, socketRate },
     lastUpdated: Timestamp.now(),
   });
+};
+
+// Fetch boxes owned by a specific user
+export const getBoxesByOwnerId = async (ownerId: string): Promise<SmartBox[]> => {
+  const q = query(collection(db, 'boxes'), where('ownerId', '==', ownerId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().boxId || doc.id, ...doc.data() } as any));
+};
+
+// Reassign an array of boxes to a new owner (or null for admin)
+export const reassignBoxes = async (boxIds: string[], newOwnerId: string | null) => {
+  const batch = writeBatch(db);
+  for (const boxId of boxIds) {
+    const boxRef = doc(db, 'boxes', boxId);
+    batch.update(boxRef, { 
+      ownerId: newOwnerId,
+      lastUpdated: Timestamp.now()
+    });
+  }
+  await batch.commit();
 };

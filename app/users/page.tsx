@@ -7,14 +7,22 @@ import {
   subscribeToUsers,
   updateUserWallet,
   deleteUser,
+  getBoxesByOwnerId,
+  reassignBoxes,
 } from "@/lib/firestore";
-import { User } from "@/types";
+import { User, SmartBox } from "@/types";
+import { ReassignBoxesModal } from "@/components/modals/reassign-boxes-modal";
 
 export default function UsersPage() {
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Reassignment Modal State
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [boxesToReassign, setBoxesToReassign] = useState<SmartBox[]>([]);
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -38,14 +46,45 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      try {
-        await deleteUser(userId);
-        // Users list will update automatically via real-time listener
-      } catch (error) {
-        console.error("Error deleting user:", error);
-        alert("Failed to delete user");
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    
+    try {
+      // Check if user owns any boxes
+      const userBoxes = await getBoxesByOwnerId(userId);
+      
+      if (userBoxes.length > 0) {
+        // User owns boxes, prompt reassignment
+        const userObj = users.find(u => u.id === userId) || null;
+        setDeletingUser(userObj);
+        setBoxesToReassign(userBoxes);
+        setIsReassignModalOpen(true);
+        return; // Pause deletion until reassignment is handled
       }
+      
+      // User owns no boxes, delete immediately
+      await deleteUser(userId);
+    } catch (error) {
+      console.error("Error initiating user deletion:", error);
+      alert("Failed to delete user");
+    }
+  };
+
+  const handleConfirmReassignAndDelete = async (newOwnerId: string | null) => {
+    if (!deletingUser) return;
+    
+    try {
+      const boxIds = boxesToReassign.map(b => b.id);
+      // 1. Reassign the boxes
+      await reassignBoxes(boxIds, newOwnerId);
+      // 2. Delete the user
+      await deleteUser(deletingUser.id);
+      
+      // Reset state
+      setDeletingUser(null);
+      setBoxesToReassign([]);
+    } catch (error) {
+      console.error("Error reassigning boxes and deleting user:", error);
+      alert("Failed to process reassignment and deletion.");
     }
   };
 
@@ -97,6 +136,15 @@ export default function UsersPage() {
           onDeleteUser={handleDeleteUser}
         />
       )}
+
+      <ReassignBoxesModal
+        isOpen={isReassignModalOpen}
+        onClose={() => setIsReassignModalOpen(false)}
+        onConfirm={handleConfirmReassignAndDelete}
+        boxesToReassign={boxesToReassign}
+        users={users}
+        deletingUser={deletingUser}
+      />
     </div>
   );
 }
