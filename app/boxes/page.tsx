@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { BoxesTable } from "@/components/tables/boxes-table";
-import { subscribeToBoxes, subscribeToUsers, updateBoxStatus, addBox, updateBoxTariff } from "@/lib/firestore";
+import { subscribeToBoxes, subscribeToUsers, updateBoxStatus, addBox, updateBoxTariff, createBoxRegistration } from "@/lib/firestore";
 import { SmartBox, User } from "@/types";
 
 export default function BoxesPage() {
@@ -193,14 +193,12 @@ interface AddBoxModalProps {
 
 function AddBoxModal({ isOpen, onClose, users, onSuccess }: AddBoxModalProps) {
   const [boxId, setBoxId] = useState("");
-  const [location, setLocation] = useState("");
-  const [latitudeStr, setLatitudeStr] = useState("");
-  const [longitudeStr, setLongitudeStr] = useState("");
   const [ownerId, setOwnerId] = useState("");
-  const [evRateStr, setEvRateStr] = useState("12");
-  const [socketRateStr, setSocketRateStr] = useState("8");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  
+  // Success state holding the generated secrets
+  const [registrationData, setRegistrationData] = useState<{registrationId: string, deviceSecret: string} | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,63 +208,35 @@ function AddBoxModal({ isOpen, onClose, users, onSuccess }: AddBoxModalProps) {
       setError("Box ID is required");
       return;
     }
-    if (!location.trim()) {
-      setError("Location description is required");
-      return;
-    }
-
-    const latitude = parseFloat(latitudeStr);
-    if (isNaN(latitude)) {
-      setError("Valid latitude is required");
-      return;
-    }
-
-    const longitude = parseFloat(longitudeStr);
-    if (isNaN(longitude)) {
-      setError("Valid longitude is required");
-      return;
-    }
-
-    const evRate = parseFloat(evRateStr);
-    if (isNaN(evRate) || evRate <= 0) {
-      setError("Valid EV tariff rate is required (must be > 0)");
-      return;
-    }
-
-    const socketRate = parseFloat(socketRateStr);
-    if (isNaN(socketRate) || socketRate <= 0) {
-      setError("Valid socket tariff rate is required (must be > 0)");
+    if (!ownerId.trim()) {
+      setError("Please assign an owner to this box.");
       return;
     }
 
     setSubmitting(true);
     try {
-      await addBox(
-        boxId.trim(),
-        location.trim(),
-        latitude,
-        longitude,
-        ownerId || undefined,
-        evRate,
-        socketRate
-      );
-      onSuccess();
+      const data = await createBoxRegistration(boxId.trim(), ownerId);
+      setRegistrationData(data);
     } catch (err: unknown) {
-      console.error("Error creating box:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to create box document";
+      console.error("Error creating box registration:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to generate registration token";
       setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleFinish = () => {
+    onSuccess();
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 sticky top-0 z-10">
-          <h2 className="text-xl font-bold text-white">Add Smart Box</h2>
+      <div className="bg-gray-900 border border-gray-700 rounded-xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center bg-gray-800">
+          <h2 className="text-xl font-bold text-white">Register Smart Box</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors cursor-pointer"
@@ -277,164 +247,88 @@ function AddBoxModal({ isOpen, onClose, users, onSuccess }: AddBoxModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 bg-red-900/50 border border-red-700 text-red-200 text-sm rounded-lg">
-              {error}
+        {registrationData ? (
+          <div className="p-6 space-y-6">
+            <div className="p-4 bg-green-900/30 border border-green-700 rounded-lg text-center">
+              <h3 className="text-lg font-bold text-green-400 mb-2">Registration Successful!</h3>
+              <p className="text-sm text-gray-300 mb-4">
+                Share this 6-digit Registration ID with the assigned owner. They will enter it in the mobile app to provision the box.
+              </p>
+              <div className="text-4xl font-mono tracking-[0.25em] text-white font-bold bg-black/50 py-3 rounded-lg border border-gray-700">
+                {registrationData.registrationId}
+              </div>
             </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
-              Box ID (Device ID)
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. box_003"
-              value={boxId}
-              onChange={(e) => setBoxId(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-            />
+            
+            <button
+              onClick={handleFinish}
+              className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors cursor-pointer"
+            >
+              Done
+            </button>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {error && (
+              <div className="p-3 bg-red-900/50 border border-red-700 text-red-200 text-sm rounded-lg">
+                {error}
+              </div>
+            )}
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
-              Location Description
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Building C - Ground Floor"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
-                Latitude
+                Box ID (Hardware ID)
               </label>
               <input
-                type="number"
-                step="any"
+                type="text"
                 required
-                placeholder="e.g. 12.040710"
-                value={latitudeStr}
-                onChange={(e) => setLatitudeStr(e.target.value)}
+                placeholder="e.g. box_005"
+                value={boxId}
+                onChange={(e) => setBoxId(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
               />
             </div>
+
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
-                Longitude
+                Assign Owner
               </label>
-              <input
-                type="number"
-                step="any"
+              <select
+                value={ownerId}
                 required
-                placeholder="e.g. 75.368876"
-                value={longitudeStr}
-                onChange={(e) => setLongitudeStr(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-              />
+                onChange={(e) => setOwnerId(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+              >
+                <option value="">-- Select an Owner --</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.displayName || u.email} ({u.email})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                Only the assigned user will be able to provision this box using the mobile app.
+              </p>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
-              Assign Owner
-            </label>
-            <select
-              value={ownerId}
-              onChange={(e) => setOwnerId(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-            >
-              <option value="">None (Unassigned)</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.displayName || u.email} ({u.email})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tariff Rates */}
-          <div className="pt-2">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-px flex-1 bg-gray-700" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
-                ⚡ Tariff Rates (₹ per kWh)
-              </span>
-              <div className="h-px flex-1 bg-gray-700" />
+            <div className="pt-4 border-t border-gray-700 flex justify-end gap-3 bg-gray-900/50 mt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors cursor-pointer"
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                disabled={submitting}
+              >
+                {submitting ? "Generating..." : "Generate Registration ID"}
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
-                  EV Charger (₹/kWh)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  placeholder="e.g. 12"
-                  value={evRateStr}
-                  onChange={(e) => setEvRateStr(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-blue-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
-                  3-Pin Socket (₹/kWh)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  placeholder="e.g. 8"
-                  value={socketRateStr}
-                  onChange={(e) => setSocketRateStr(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-green-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              These rates determine what users are charged per kWh consumed.
-            </p>
-          </div>
-
-          <div className="pt-4 border-t border-gray-700 flex justify-end gap-3 bg-gray-900/50">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors cursor-pointer"
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-              disabled={submitting}
-            >
-              {submitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                "Save Box"
-              )}
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );

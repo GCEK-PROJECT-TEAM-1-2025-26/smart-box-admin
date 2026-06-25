@@ -394,3 +394,54 @@ export const reassignBoxes = async (boxIds: string[], newOwnerId: string | null)
   }
   await batch.commit();
 };
+
+// Create a new box registration for mobile app provisioning
+export const createBoxRegistration = async (boxId: string, ownerId: string) => {
+  // Generate a random 6-digit PIN
+  const registrationId = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Generate a simple secure device secret (since we can't guarantee crypto.randomUUID here)
+  const generateSecret = () => {
+    return 'xxxx-xxxx-xxxx-xxxx'.replace(/[x]/g, () => {
+      return (Math.random() * 16 | 0).toString(16);
+    });
+  };
+  const deviceSecret = generateSecret();
+
+  const batch = writeBatch(db);
+
+  // 1. Create the Box document with pending status
+  const boxRef = doc(db, 'boxes', boxId);
+  batch.set(boxRef, {
+    boxId: boxId,
+    ownerId: ownerId,
+    location: 'Pending Setup',
+    status: 'pending_provision',
+    isLocked: true,
+    rfidDetected: false,
+    latitude: 0.0,
+    longitude: 0.0,
+    tariff: { evRate: 12.0, socketRate: 8.0 },
+    devices: {
+      evCharger: { isOn: false, voltage: 0, current: 0, power: 0 },
+      threePinSocket: { isOn: false, voltage: 0, current: 0, power: 0 }
+    },
+    lastUpdated: serverTimestamp(),
+    totalSessions: 0,
+    totalRevenue: 0
+  });
+
+  // 2. Create the Provisioning Token
+  const tokenRef = doc(db, 'provisioningTokens', registrationId);
+  batch.set(tokenRef, {
+    registrationId,
+    boxId,
+    ownerId,
+    deviceSecret,
+    createdAt: serverTimestamp()
+  });
+
+  await batch.commit();
+
+  return { registrationId, deviceSecret };
+};
