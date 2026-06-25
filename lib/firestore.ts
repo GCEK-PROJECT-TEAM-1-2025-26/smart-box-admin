@@ -426,6 +426,7 @@ export const createBoxRegistration = async (boxId: string, ownerId: string) => {
       evCharger: { isOn: false, voltage: 0, current: 0, power: 0 },
       threePinSocket: { isOn: false, voltage: 0, current: 0, power: 0 }
     },
+    deviceSecret: deviceSecret,
     lastUpdated: serverTimestamp(),
     totalSessions: 0,
     totalRevenue: 0

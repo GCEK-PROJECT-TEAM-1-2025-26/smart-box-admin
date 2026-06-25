@@ -7,7 +7,7 @@ initializeAdmin();
 const db = admin.firestore();
 
 // Simple device authentication
-function authenticateDevice(req: NextRequest): string | null {
+async function authenticateDevice(req: NextRequest): Promise<string | null> {
   const deviceId = req.headers.get("x-device-id");
   const deviceSecret = req.headers.get("x-device-secret");
 
@@ -15,18 +15,32 @@ function authenticateDevice(req: NextRequest): string | null {
     return null;
   }
 
+  // 1. Fallback to global secret for simple testing
   const VALID_SECRET = process.env.ESP_DEVICE_SECRET || "super-secret-token";
-  if (deviceSecret !== VALID_SECRET) {
-    return null;
+  if (deviceSecret === VALID_SECRET) {
+    return deviceId;
   }
 
-  return deviceId;
+  // 2. Check per-box unique secure secret in Firestore
+  try {
+    const doc = await db.collection("boxes").doc(deviceId).get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data?.deviceSecret === deviceSecret) {
+        return deviceId;
+      }
+    }
+  } catch (error) {
+    console.error("Auth DB Error:", error);
+  }
+
+  return null;
 }
 
 export async function POST(req: NextRequest) {
   try {
     // Authenticate ESP32 device
-    const deviceId = authenticateDevice(req);
+    const deviceId = await authenticateDevice(req);
     if (!deviceId) {
       return NextResponse.json(
         { error: "Unauthorized" },
