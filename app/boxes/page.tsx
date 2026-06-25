@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { BoxesTable } from "@/components/tables/boxes-table";
-import { subscribeToBoxes, subscribeToUsers, updateBoxStatus, addBox, updateBoxTariff, createBoxRegistration } from "@/lib/firestore";
+import { subscribeToBoxes, subscribeToUsers, updateBoxStatus, addBox, updateBoxTariff, createBoxRegistration, deleteBox } from "@/lib/firestore";
 import { SmartBox, User } from "@/types";
 
 export default function BoxesPage() {
@@ -73,6 +73,16 @@ export default function BoxesPage() {
     } catch (error) {
       console.error("Error toggling device:", error);
       alert("Failed to toggle device");
+    }
+  };
+
+  const handleDeleteBox = async (boxId: string) => {
+    if (!window.confirm("Are you sure you want to delete this box? This action cannot be undone.")) return;
+    try {
+      await deleteBox(boxId);
+    } catch (error) {
+      console.error("Error deleting box:", error);
+      alert("Failed to delete box");
     }
   };
 
@@ -158,6 +168,7 @@ export default function BoxesPage() {
           onToggleBox={handleToggleBox}
           onToggleDevice={handleToggleDevice}
           onEditTariff={(box) => setTariffEditBox(box)}
+          onDeleteBox={handleDeleteBox}
         />
       )}
 

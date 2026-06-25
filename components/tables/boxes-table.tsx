@@ -9,6 +9,7 @@ interface BoxesTableProps {
     currentState: boolean
   ) => void;
   onEditTariff?: (box: SmartBox) => void;
+  onDeleteBox?: (boxId: string) => void;
 }
 
 export function BoxesTable({
@@ -16,6 +17,7 @@ export function BoxesTable({
   onToggleBox,
   onToggleDevice,
   onEditTariff,
+  onDeleteBox,
 }: BoxesTableProps) {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
@@ -236,6 +238,12 @@ export function BoxesTable({
                     className="px-3 py-1 rounded text-sm border bg-blue-900/60 text-blue-300 hover:bg-blue-800 border-blue-700 cursor-pointer"
                   >
                     Edit Tariff
+                  </button>
+                  <button
+                    onClick={() => onDeleteBox && onDeleteBox(box.id)}
+                    className="px-3 py-1 rounded text-sm border bg-red-900/60 text-red-300 hover:bg-red-800 border-red-700 cursor-pointer"
+                  >
+                    Delete
                   </button>
                 </div>
               </td>

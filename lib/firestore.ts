@@ -446,3 +446,10 @@ export const createBoxRegistration = async (boxId: string, ownerId: string) => {
 
   return { registrationId, deviceSecret };
 };
+
+// Delete a box from the database
+export const deleteBox = async (boxId: string) => {
+  const boxRef = doc(db, 'boxes', boxId);
+  await deleteDoc(boxRef);
+};
+
