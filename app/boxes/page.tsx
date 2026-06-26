@@ -204,6 +204,7 @@ interface AddBoxModalProps {
 
 function AddBoxModal({ isOpen, onClose, users, onSuccess }: AddBoxModalProps) {
   const [boxId, setBoxId] = useState("");
+  const [location, setLocation] = useState("");
   const [ownerId, setOwnerId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -219,6 +220,10 @@ function AddBoxModal({ isOpen, onClose, users, onSuccess }: AddBoxModalProps) {
       setError("Box ID is required");
       return;
     }
+    if (!location.trim()) {
+      setError("Location name is required");
+      return;
+    }
     if (!ownerId.trim()) {
       setError("Please assign an owner to this box.");
       return;
@@ -226,7 +231,7 @@ function AddBoxModal({ isOpen, onClose, users, onSuccess }: AddBoxModalProps) {
 
     setSubmitting(true);
     try {
-      const data = await createBoxRegistration(boxId.trim(), ownerId);
+      const data = await createBoxRegistration(boxId.trim(), ownerId, location.trim());
       setRegistrationData(data);
     } catch (err: unknown) {
       console.error("Error creating box registration:", err);
@@ -296,6 +301,20 @@ function AddBoxModal({ isOpen, onClose, users, onSuccess }: AddBoxModalProps) {
                 value={boxId}
                 onChange={(e) => setBoxId(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
+                Location Name
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Main Lobby, Tech Park"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 

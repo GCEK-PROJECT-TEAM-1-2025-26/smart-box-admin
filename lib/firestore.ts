@@ -399,7 +399,7 @@ export const reassignBoxes = async (boxIds: string[], newOwnerId: string | null)
 };
 
 // Create a new box registration for mobile app provisioning
-export const createBoxRegistration = async (boxId: string, ownerId: string) => {
+export const createBoxRegistration = async (boxId: string, ownerId: string, location: string) => {
   // Generate a random 6-digit PIN
   const registrationId = Math.floor(100000 + Math.random() * 900000).toString();
   
@@ -418,7 +418,7 @@ export const createBoxRegistration = async (boxId: string, ownerId: string) => {
   batch.set(boxRef, {
     boxId: boxId,
     ownerId: ownerId,
-    location: 'Pending Setup',
+    location: location,
     status: 'pending_provision',
     pendingRegistrationId: registrationId,
     isLocked: true,
