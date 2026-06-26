@@ -21,6 +21,8 @@ export interface SmartBox {
   lastHeartbeat?: Date;
   totalSessions: number;
   totalRevenue: number;
+  status?: string;
+  pendingRegistrationId?: string;
   ownerId?: string;
   ownerName?: string;
   latitude?: number;

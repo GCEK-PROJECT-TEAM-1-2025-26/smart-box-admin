@@ -87,6 +87,11 @@ export function BoxesTable({
                       GPS: {box.latitude.toFixed(6)}, {box.longitude.toFixed(6)}
                     </div>
                   )}
+                  {box.status === 'pending_provision' && box.pendingRegistrationId && (
+                    <div className="text-xs font-mono font-bold text-yellow-400 mt-2 bg-yellow-900/30 px-2 py-1 rounded-md inline-block border border-yellow-700/50">
+                      Provisioning Code: {box.pendingRegistrationId}
+                    </div>
+                  )}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

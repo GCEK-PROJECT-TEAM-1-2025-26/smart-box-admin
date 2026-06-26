@@ -161,6 +161,7 @@ export const subscribeToBoxes = (callback: (boxes: SmartBox[]) => void) => {
         const threePinOn: boolean = data.devices?.threePinSocket?.isOn ?? false;
         // Flutter uses status field: 'available', 'in_use'
         const status: string = data.status ?? 'available';
+        const pendingRegistrationId: string | undefined = data.pendingRegistrationId;
         const lastHeartbeat = data.lastHeartbeat?.toDate() ?? undefined;
         const isOnline = lastHeartbeat ? (Date.now() - lastHeartbeat.getTime() < 20000) : false;
 
@@ -177,6 +178,8 @@ export const subscribeToBoxes = (callback: (boxes: SmartBox[]) => void) => {
           evChargerOn,
           threePinOn,
           currentUser: status === 'in_use' ? (data.currentUserId ?? 'In Use') : undefined,
+          status,
+          pendingRegistrationId,
           lastUpdated: data.lastUpdated?.toDate() ?? new Date(),
           lastHeartbeat,
           ownerId,
@@ -417,6 +420,7 @@ export const createBoxRegistration = async (boxId: string, ownerId: string) => {
     ownerId: ownerId,
     location: 'Pending Setup',
     status: 'pending_provision',
+    pendingRegistrationId: registrationId,
     isLocked: true,
     rfidDetected: false,
     latitude: 0.0,
